@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, ArrowLeft, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Testimonial, addTestimonial, getTestimonials } from '@/lib/data';
+import { addTestimonial, getTestimonials } from '@/lib/data';
+import { Testimonial } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
