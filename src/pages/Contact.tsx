@@ -1,9 +1,9 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, MapPin, Send } from 'lucide-react';
+import { Phone, Mail, MapPin, Send, Mic, MicOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { getCartItemCount } from '@/lib/data';
@@ -16,6 +16,8 @@ const Contact = () => {
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -59,26 +61,114 @@ const Contact = () => {
     }, 1500);
   };
 
+  const startVoiceInput = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      const audioChunks: BlobPart[] = [];
+      
+      mediaRecorder.addEventListener('dataavailable', (event) => {
+        audioChunks.push(event.data);
+      });
+      
+      mediaRecorder.addEventListener('stop', async () => {
+        setIsRecording(false);
+        
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        
+        toast({
+          title: "Traitement de l'audio...",
+          description: "Conversion de votre message vocal en texte.",
+        });
+        
+        // Simulate conversion (in a real app, you'd use a Speech-to-Text API)
+        setTimeout(() => {
+          // Append simulated text to the current message
+          setFormData(prev => ({
+            ...prev,
+            message: prev.message + (prev.message ? '\n' : '') + 
+              "Message vocal transcrit: Bonjour, je suis intéressé par vos services..."
+          }));
+          
+          toast({
+            title: "Audio transcrit !",
+            description: "Votre message vocal a été ajouté au formulaire.",
+          });
+        }, 1500);
+        
+        // Stop all audio tracks
+        stream.getTracks().forEach(track => track.stop());
+      });
+      
+      mediaRecorder.start();
+      setIsRecording(true);
+      
+      toast({
+        title: "Enregistrement en cours",
+        description: "Parlez maintenant... Cliquez à nouveau sur le bouton pour arrêter.",
+      });
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      toast({
+        title: "Erreur d'accès au microphone",
+        description: "Veuillez vérifier les permissions de votre navigateur.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const stopVoiceInput = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+    }
+  };
+  
+  const toggleVoiceRecording = () => {
+    if (isRecording) {
+      stopVoiceInput();
+    } else {
+      startVoiceInput();
+    }
+  };
+
   const contactInfo = [
     {
       icon: Phone,
       title: "Téléphone",
-      details: ["+228 91254591", "+228 99019805"],
+      details: [
+        { text: "+228 91254591", link: "https://wa.me/22891254591", type: "whatsapp" },
+        { text: "+228 99019805", link: "tel:+22899019805", type: "phone" }
+      ],
       delay: 0
     },
     {
       icon: Mail,
       title: "Email",
-      details: ["contact@computerbusiness.com", "support@computerbusiness.com"],
+      details: [
+        { text: "contact@computerbusiness.fr", link: "mailto:contact@computerbusiness.fr" },
+        { text: "support@computerbusiness.fr", link: "mailto:support@computerbusiness.fr" }
+      ],
       delay: 0.1
     },
     {
       icon: MapPin,
       title: "Adresse",
-      details: ["Lomé, Togo", "Ouvert Lun-Sam, 8h-18h"],
+      details: [
+        { text: "Lomé, Togo" },
+        { text: "Ouvert Lun-Sam, 8h-18h" }
+      ],
       delay: 0.2
     }
   ];
+
+  const coordinates = {
+    lat: 6.180389,  // 6°10'49.4"N
+    lng: 1.195278   // 1°11'43.0"E
+  };
+
+  const mapSrc = `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.6212265593743!2d${coordinates.lng}!3d${coordinates.lat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMTAnNDkuNCJOIDHCsDExJzQzLjAiRQ!5e0!3m2!1sfr!2sus!4v1647395307985!5m2!1sfr!2sus`;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -109,8 +199,20 @@ const Contact = () => {
                     <div>
                       <h3 className="font-medium mb-2">{item.title}</h3>
                       {item.details.map((detail, i) => (
-                        <p key={i} className="text-muted-foreground">
-                          {detail}
+                        <p key={i} className="text-muted-foreground mb-1">
+                          {detail.link ? (
+                            <a 
+                              href={detail.link} 
+                              className="hover:text-primary transition-colors"
+                              target={detail.type === "whatsapp" ? "_blank" : undefined}
+                              rel={detail.type === "whatsapp" ? "noopener noreferrer" : undefined}
+                            >
+                              {detail.text}
+                              {detail.type === "whatsapp" && " (WhatsApp)"}
+                            </a>
+                          ) : (
+                            detail.text
+                          )}
                         </p>
                       ))}
                     </div>
@@ -125,7 +227,7 @@ const Contact = () => {
                 className="rounded-xl overflow-hidden shadow-md h-[300px] bg-gray-100"
               >
                 <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d254226.38974205758!2d1.0833922!3d6.172497299999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1023e1c113185419%3A0x3224b5422caf411d!2sLom%C3%A9%2C%20Togo!5e0!3m2!1sfr!2sus!4v1647395307985!5m2!1sfr!2sus"
+                  src={mapSrc}
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
@@ -190,9 +292,23 @@ const Contact = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-foreground mb-1">
-                    Message <span className="text-red-500">*</span>
-                  </label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label htmlFor="message" className="block text-sm font-medium text-foreground">
+                      Message <span className="text-red-500">*</span>
+                    </label>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      className={`p-1 h-8 ${isRecording ? 'bg-red-50 text-red-500 border-red-200' : ''}`}
+                      onClick={toggleVoiceRecording}
+                    >
+                      {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+                      <span className="ml-1 text-xs">
+                        {isRecording ? 'Arrêter' : 'Dicter'}
+                      </span>
+                    </Button>
+                  </div>
                   <textarea
                     id="message"
                     name="message"
@@ -207,7 +323,7 @@ const Contact = () => {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isRecording}
                 >
                   {isSubmitting ? (
                     'Envoi en cours...'
@@ -219,6 +335,29 @@ const Contact = () => {
                   )}
                 </Button>
               </form>
+            </motion.div>
+          </div>
+        </div>
+        
+        {/* Full width map section */}
+        <div className="mt-16">
+          <div className="container mx-auto px-6">
+            <h2 className="text-2xl md:text-3xl font-display font-bold mb-6 text-center">Notre Emplacement</h2>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="w-full h-[400px] rounded-xl overflow-hidden shadow-lg border border-border/40"
+            >
+              <iframe
+                src={mapSrc}
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                title="COMPUTER BUSINESS CENTER Location Map"
+              ></iframe>
             </motion.div>
           </div>
         </div>

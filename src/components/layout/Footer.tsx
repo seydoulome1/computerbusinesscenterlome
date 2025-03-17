@@ -49,7 +49,7 @@ const Footer = () => {
           <div className="space-y-2">
             <div className="flex items-center space-x-3">
               <Phone size={16} className="text-primary" />
-              <a href="tel:+22891254591" className="text-muted-foreground hover:text-primary transition-colors">+228 91254591</a>
+              <a href="https://wa.me/22891254591" className="text-muted-foreground hover:text-primary transition-colors" target="_blank" rel="noopener noreferrer">+228 91254591 (WhatsApp)</a>
             </div>
             <div className="flex items-center space-x-3">
               <Phone size={16} className="text-primary" />
@@ -57,7 +57,7 @@ const Footer = () => {
             </div>
             <div className="flex items-center space-x-3">
               <Mail size={16} className="text-primary" />
-              <a href="mailto:contact@computerbusiness.com" className="text-muted-foreground hover:text-primary transition-colors">contact@computerbusiness.com</a>
+              <a href="mailto:contact@computerbusiness.fr" className="text-muted-foreground hover:text-primary transition-colors">contact@computerbusiness.fr</a>
             </div>
           </div>
         </div>
