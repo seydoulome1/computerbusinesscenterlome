@@ -132,7 +132,7 @@ export const Cart = () => {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl shadow-sm border border-border/40 overflow-hidden">
               <div className="divide-y divide-border/60">
-                <AnimatePresence>
+                <AnimatePresence mode="sync">
                   {cartItems.map((item) => (
                     <motion.div 
                       key={item.product.id}
