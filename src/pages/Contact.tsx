@@ -3,10 +3,11 @@ import { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, MapPin, Send, Mic, MicOff } from 'lucide-react';
+import { Phone, Mail, MapPin, Send, Mic, MicOff, StopCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { getCartItemCount } from '@/lib/data';
+import { Progress } from '@/components/ui/progress';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -17,13 +18,51 @@ const Contact = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [progress, setProgress] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     // Scroll to top when page loads
     window.scrollTo(0, 0);
   }, []);
+
+  // Recording timer effect
+  useEffect(() => {
+    if (isRecording) {
+      // Start timer
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => {
+          const newTime = prev + 1;
+          // Update progress (max recording time of 60 seconds)
+          setProgress(Math.min((newTime / 60) * 100, 100));
+          return newTime;
+        });
+      }, 1000);
+    } else {
+      // Clear timer
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      // Reset timer and progress when not recording
+      if (!isRecording && recordingTime > 0) {
+        setTimeout(() => {
+          setRecordingTime(0);
+          setProgress(0);
+        }, 1500); // Delay reset to allow animation to complete
+      }
+    }
+
+    // Cleanup
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, [isRecording, recordingTime]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -59,6 +98,12 @@ const Contact = () => {
       });
       setIsSubmitting(false);
     }, 1500);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const startVoiceInput = async () => {
@@ -104,6 +149,7 @@ const Contact = () => {
       
       mediaRecorder.start();
       setIsRecording(true);
+      setRecordingTime(0);
       
       toast({
         title: "Enregistrement en cours",
@@ -296,19 +342,43 @@ const Contact = () => {
                     <label htmlFor="message" className="block text-sm font-medium text-foreground">
                       Message <span className="text-red-500">*</span>
                     </label>
+                    
                     <Button 
                       type="button" 
-                      variant="outline" 
-                      size="sm"
-                      className={`p-1 h-8 ${isRecording ? 'bg-red-50 text-red-500 border-red-200' : ''}`}
+                      variant={isRecording ? "destructive" : "outline"}
+                      size="lg"
+                      className={`h-12 text-base font-medium transition-all ${isRecording ? 'animate-pulse shadow-md' : ''}`}
                       onClick={toggleVoiceRecording}
                     >
-                      {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
-                      <span className="ml-1 text-xs">
-                        {isRecording ? 'Arrêter' : 'Dicter'}
-                      </span>
+                      {isRecording ? (
+                        <>
+                          <StopCircle size={20} className="mr-2" />
+                          <span>Arrêter l'enregistrement</span>
+                          <span className="ml-2 font-mono bg-white/20 px-2 py-1 rounded-md">
+                            {formatTime(recordingTime)}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic size={20} className="mr-2" />
+                          <span>Enregistrer un message vocal</span>
+                        </>
+                      )}
                     </Button>
                   </div>
+                  
+                  {isRecording && (
+                    <div className="mb-4">
+                      <Progress value={progress} className="h-2 mb-1" />
+                      <p className="text-xs text-right text-muted-foreground">
+                        {recordingTime < 60 ? 
+                          `Enregistrement en cours... (${formatTime(recordingTime)}/01:00)` : 
+                          "Temps maximum atteint"
+                        }
+                      </p>
+                    </div>
+                  )}
+                  
                   <textarea
                     id="message"
                     name="message"
